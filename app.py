@@ -101,11 +101,22 @@ class YemotTranscriptionServiceMail:
         
         try:
             logger.debug(f"Sending email to: {recipient}")
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-                server.login(self.gmail_address, self.gmail_app_password)
-                server.send_message(message)
-            logger.debug("Email sent successfully")
-            return True
+            # נסה קודם עם STARTTLS (פורט 587)
+            try:
+                with smtplib.SMTP("smtp.gmail.com", 587) as server:
+                    server.starttls()
+                    server.login(self.gmail_address, self.gmail_app_password)
+                    server.send_message(message)
+                logger.debug("Email sent successfully via STARTTLS")
+                return True
+            except Exception as e:
+                logger.debug(f"STARTTLS failed, trying SSL: {e}")
+                # נסה עם SSL (פורט 465)
+                with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+                    server.login(self.gmail_address, self.gmail_app_password)
+                    server.send_message(message)
+                logger.debug("Email sent successfully via SSL")
+                return True
         except Exception as e:
             logger.error(f"שגיאה בשליחת מייל: {e}")
             return False
