@@ -9,9 +9,6 @@ from flask import Flask, request
 import requests
 from google import genai
 from google.genai import types
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 # הגדרת logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -49,19 +46,13 @@ app = Flask(__name__)
 YMOT_TOKEN = os.getenv('YMOT_TOKEN', 'YOUR_TOKEN_HERE')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'YOUR_GEMINI_KEY_HERE')
 
-# הגדרות מייל
-GMAIL_ADDRESS = os.getenv('GMAIL_ADDRESS', 'your@gmail.com')
-GMAIL_APP_PASSWORD = os.getenv('GMAIL_APP_PASSWORD', 'your_app_password')
-
-class YemotTranscriptionServiceMail:
+class YemotTranscriptionService:
     """
-    שירות תמלול קבצים מימות המשיח עם שליחת מייל
+    שירות תמלול קבצים מימות המשיח
     """
-    def __init__(self, yemot_token: str, gemini_api_key: str, gmail_address: str, gmail_app_password: str):
+    def __init__(self, yemot_token: str, gemini_api_key: str):
         self.yemot_token = yemot_token
         self.gemini_api_key = gemini_api_key
-        self.gmail_address = gmail_address
-        self.gmail_app_password = gmail_app_password
         self.base_url = "https://www.call2all.co.il/ym/api/"
         self.client = genai.Client(api_key=gemini_api_key)
     
@@ -89,25 +80,32 @@ class YemotTranscriptionServiceMail:
             logger.error(f"שגיאה בהורדת קובץ: {e}")
             return None
     
-    def send_email(self, subject: str, body: str, recipient: str):
+    def upload_tts_file(self, extension: str, file_name: str, content: str):
         """
-        שולח מייל עם התמלול
+        מעלה קובץ TTS לשלוחה מסוימת
         """
-        message = MIMEMultipart()
-        message["From"] = self.gmail_address
-        message["To"] = recipient
-        message["Subject"] = subject
-        message.attach(MIMEText(body, "plain", "utf-8"))
+        url = f"{self.base_url}UploadTextFile"
+        params = {
+            'token': self.yemot_token,
+            'path': f'ivr2:{extension}/{file_name}',
+            'contents': content,
+            'convertAudio': '1'
+        }
         
         try:
-            logger.debug(f"Sending email to: {recipient}")
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-                server.login(self.gmail_address, self.gmail_app_password)
-                server.send_message(message)
-            logger.debug("Email sent successfully")
-            return True
+            logger.debug(f"Uploading TTS file: {file_name} to extension {extension}")
+            logger.debug(f"Content length: {len(content)} characters")
+            response = requests.post(url, data=params, verify=False)
+            logger.debug(f"Upload response status: {response.status_code}")
+            if response.status_code == 200:
+                data = response.json()
+                logger.debug(f"Upload response: {data}")
+                return data.get('responseStatus') == 'OK'
+            else:
+                logger.debug(f"Upload failed with status {response.status_code}")
+            return False
         except Exception as e:
-            logger.error(f"שגיאה בשליחת מייל: {e}")
+            logger.error(f"שגיאה בהעלאת קובץ: {e}")
             return False
     
     def transcribe_audio(self, audio_file_path: str) -> str:
@@ -170,9 +168,9 @@ class YemotTranscriptionServiceMail:
             except:
                 pass
     
-    def process_transcription_from_path(self, file_path: str, email_recipient: str) -> str:
+    def process_transcription_from_path(self, file_path: str, target_extension: str) -> str:
         """
-        מעבדת תמלול מנתיב קובץ מלא ושולחת במייל
+        מעבדת תמלול מנתיב קובץ מלא
         """
         logger.debug(f"Processing transcription from path: {file_path}")
 
@@ -194,26 +192,15 @@ class YemotTranscriptionServiceMail:
             if not transcription:
                 return "id_list_message=transcription_failed"
 
-            # יצירת נושא המייל
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            subject = f"תמלול קובץ - {timestamp}"
+            # יצירת שם קובץ עם timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            tts_filename = f"transcription_{timestamp}.tts"
 
-            # יצירת גוף המייל
-            body = f"""
-תמלול קובץ מנתיב: {file_path}
-תאריך: {timestamp}
+            # העלאת התמלול כקובץ TTS לשלוחת היעד
+            upload_success = self.upload_tts_file(target_extension, tts_filename, transcription)
 
---------------------
-תוכן התמלול:
-{transcription}
---------------------
-"""
-
-            # שליחת המייל
-            email_success = self.send_email(subject, body, email_recipient)
-
-            if not email_success:
-                return "id_list_message=email_failed"
+            if not upload_success:
+                return "id_list_message=upload_failed"
 
             # הצלחה
             return "id_list_message=success"
@@ -226,12 +213,12 @@ class YemotTranscriptionServiceMail:
                 pass
 
 # משתנה גלובלי לשירות
-service = YemotTranscriptionServiceMail(YMOT_TOKEN, GEMINI_API_KEY, GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
+service = YemotTranscriptionService(YMOT_TOKEN, GEMINI_API_KEY)
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
     """
-    נקודת קצה לתמלול - מקבלת נתיב קובץ ושולחת את התמלול במייל
+    נקודת קצה לתמלול - מקבלת נתיב קובץ ומעלה את התמלול לשלוחה 8
     """
     global is_transcribing
     try:
@@ -244,15 +231,7 @@ def transcribe():
             logger.debug("No file path provided")
             return "id_list_message=no_file_path"
 
-        # קבלת כתובת המייל מהפרמטר email
-        email_recipient = request.form.get('email')
-
-        if not email_recipient:
-            logger.debug("No email recipient provided")
-            return "id_list_message=no_email"
-
         logger.debug(f"File path received: {file_path}")
-        logger.debug(f"Email recipient: {email_recipient}")
 
         # הוספת ivr2: לנתיב
         full_path = f"ivr2:{file_path}"
@@ -270,7 +249,7 @@ def transcribe():
             global is_transcribing
             logger.debug("Starting background transcription process")
             try:
-                result = service.process_transcription_from_path(full_path, email_recipient)
+                result = service.process_transcription_from_path(full_path, '8')
                 logger.debug(f"Background transcription result: {result}")
             finally:
                 with transcription_lock:
