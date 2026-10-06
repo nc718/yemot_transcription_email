@@ -52,18 +52,16 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'YOUR_GEMINI_KEY_HERE')
 # הגדרות מייל
 GMAIL_ADDRESS = os.getenv('GMAIL_ADDRESS', 'your@gmail.com')
 GMAIL_APP_PASSWORD = os.getenv('GMAIL_APP_PASSWORD', 'your_app_password')
-EMAIL_RECIPIENT = os.getenv('EMAIL_RECIPIENT', 'recipient@example.com')
 
 class YemotTranscriptionServiceMail:
     """
     שירות תמלול קבצים מימות המשיח עם שליחת מייל
     """
-    def __init__(self, yemot_token: str, gemini_api_key: str, gmail_address: str, gmail_app_password: str, email_recipient: str):
+    def __init__(self, yemot_token: str, gemini_api_key: str, gmail_address: str, gmail_app_password: str):
         self.yemot_token = yemot_token
         self.gemini_api_key = gemini_api_key
         self.gmail_address = gmail_address
         self.gmail_app_password = gmail_app_password
-        self.email_recipient = email_recipient
         self.base_url = "https://www.call2all.co.il/ym/api/"
         self.client = genai.Client(api_key=gemini_api_key)
     
@@ -91,18 +89,18 @@ class YemotTranscriptionServiceMail:
             logger.error(f"שגיאה בהורדת קובץ: {e}")
             return None
     
-    def send_email(self, subject: str, body: str):
+    def send_email(self, subject: str, body: str, recipient: str):
         """
         שולח מייל עם התמלול
         """
         message = MIMEMultipart()
         message["From"] = self.gmail_address
-        message["To"] = self.email_recipient
+        message["To"] = recipient
         message["Subject"] = subject
         message.attach(MIMEText(body, "plain", "utf-8"))
         
         try:
-            logger.debug(f"Sending email to: {self.email_recipient}")
+            logger.debug(f"Sending email to: {recipient}")
             with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
                 server.login(self.gmail_address, self.gmail_app_password)
                 server.send_message(message)
@@ -172,7 +170,7 @@ class YemotTranscriptionServiceMail:
             except:
                 pass
     
-    def process_transcription_from_path(self, file_path: str) -> str:
+    def process_transcription_from_path(self, file_path: str, email_recipient: str) -> str:
         """
         מעבדת תמלול מנתיב קובץ מלא ושולחת במייל
         """
@@ -212,7 +210,7 @@ class YemotTranscriptionServiceMail:
 """
 
             # שליחת המייל
-            email_success = self.send_email(subject, body)
+            email_success = self.send_email(subject, body, email_recipient)
 
             if not email_success:
                 return "id_list_message=email_failed"
@@ -228,7 +226,7 @@ class YemotTranscriptionServiceMail:
                 pass
 
 # משתנה גלובלי לשירות
-service = YemotTranscriptionServiceMail(YMOT_TOKEN, GEMINI_API_KEY, GMAIL_ADDRESS, GMAIL_APP_PASSWORD, EMAIL_RECIPIENT)
+service = YemotTranscriptionServiceMail(YMOT_TOKEN, GEMINI_API_KEY, GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
@@ -246,7 +244,15 @@ def transcribe():
             logger.debug("No file path provided")
             return "id_list_message=no_file_path"
 
+        # קבלת כתובת המייל מהפרמטר email
+        email_recipient = request.form.get('email')
+
+        if not email_recipient:
+            logger.debug("No email recipient provided")
+            return "id_list_message=no_email"
+
         logger.debug(f"File path received: {file_path}")
+        logger.debug(f"Email recipient: {email_recipient}")
 
         # הוספת ivr2: לנתיב
         full_path = f"ivr2:{file_path}"
@@ -264,7 +270,7 @@ def transcribe():
             global is_transcribing
             logger.debug("Starting background transcription process")
             try:
-                result = service.process_transcription_from_path(full_path)
+                result = service.process_transcription_from_path(full_path, email_recipient)
                 logger.debug(f"Background transcription result: {result}")
             finally:
                 with transcription_lock:
