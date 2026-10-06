@@ -1,12 +1,18 @@
 services:
   - type: web
-    name: yemot-transcription-service
+    name: yemot-transcription-email
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python app.py
+    startCommand: python app_email.py
     envVars:
       - key: YMOT_TOKEN
         sync: false
       - key: GEMINI_API_KEY
+        sync: false
+      - key: GMAIL_ADDRESS
+        sync: false
+      - key: GMAIL_APP_PASSWORD
+        sync: false
+      - key: EMAIL_RECIPIENT
         sync: false
