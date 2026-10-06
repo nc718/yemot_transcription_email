@@ -9,9 +9,6 @@ from flask import Flask, request
 import requests
 from google import genai
 from google.genai import types
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 # הגדרת logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -49,19 +46,21 @@ app = Flask(__name__)
 YMOT_TOKEN = os.getenv('YMOT_TOKEN', 'YOUR_TOKEN_HERE')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'YOUR_GEMINI_KEY_HERE')
 
-# הגדרות מייל
-GMAIL_ADDRESS = os.getenv('GMAIL_ADDRESS', 'your@gmail.com')
-GMAIL_APP_PASSWORD = os.getenv('GMAIL_APP_PASSWORD', 'your_app_password')
+# הגדרות מייל - Mailjet
+MAILJET_API_KEY = os.getenv('MAILJET_API_KEY', 'YOUR_MAILJET_KEY_HERE')
+MAILJET_SECRET_KEY = os.getenv('MAILJET_SECRET_KEY', 'YOUR_MAILJET_SECRET_HERE')
+MAILJET_FROM_EMAIL = os.getenv('MAILJET_FROM_EMAIL', 'your@gmail.com')
 
 class YemotTranscriptionServiceMail:
     """
     שירות תמלול קבצים מימות המשיח עם שליחת מייל
     """
-    def __init__(self, yemot_token: str, gemini_api_key: str, gmail_address: str, gmail_app_password: str):
+    def __init__(self, yemot_token: str, gemini_api_key: str, mailjet_api_key: str, mailjet_secret_key: str, mailjet_from_email: str):
         self.yemot_token = yemot_token
         self.gemini_api_key = gemini_api_key
-        self.gmail_address = gmail_address
-        self.gmail_app_password = gmail_app_password
+        self.mailjet_api_key = mailjet_api_key
+        self.mailjet_secret_key = mailjet_secret_key
+        self.mailjet_from_email = mailjet_from_email
         self.base_url = "https://www.call2all.co.il/ym/api/"
         self.client = genai.Client(api_key=gemini_api_key)
     
@@ -91,32 +90,40 @@ class YemotTranscriptionServiceMail:
     
     def send_email(self, subject: str, body: str, recipient: str):
         """
-        שולח מייל עם התמלול
+        שולח מייל עם התמלול באמצעות Mailjet API
         """
-        message = MIMEMultipart()
-        message["From"] = self.gmail_address
-        message["To"] = recipient
-        message["Subject"] = subject
-        message.attach(MIMEText(body, "plain", "utf-8"))
+        url = "https://api.mailjet.com/v3.1/send"
+        headers = {
+            "Content-Type": "application/json"
+        }
+        auth = (self.mailjet_api_key, self.mailjet_secret_key)
+        data = {
+            "Messages": [
+                {
+                    "From": {
+                        "Email": self.mailjet_from_email
+                    },
+                    "To": [
+                        {
+                            "Email": recipient
+                        }
+                    ],
+                    "Subject": subject,
+                    "TextPart": body
+                }
+            ]
+        }
         
         try:
             logger.debug(f"Sending email to: {recipient}")
-            # נסה קודם עם STARTTLS (פורט 587)
-            try:
-                with smtplib.SMTP("smtp.gmail.com", 587) as server:
-                    server.starttls()
-                    server.login(self.gmail_address, self.gmail_app_password)
-                    server.send_message(message)
-                logger.debug("Email sent successfully via STARTTLS")
+            response = requests.post(url, headers=headers, auth=auth, json=data)
+            logger.debug(f"Mailjet response status: {response.status_code}")
+            if response.status_code == 200:
+                logger.debug("Email sent successfully")
                 return True
-            except Exception as e:
-                logger.debug(f"STARTTLS failed, trying SSL: {e}")
-                # נסה עם SSL (פורט 465)
-                with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-                    server.login(self.gmail_address, self.gmail_app_password)
-                    server.send_message(message)
-                logger.debug("Email sent successfully via SSL")
-                return True
+            else:
+                logger.error(f"Mailjet error: {response.text}")
+                return False
         except Exception as e:
             logger.error(f"שגיאה בשליחת מייל: {e}")
             return False
@@ -237,7 +244,7 @@ class YemotTranscriptionServiceMail:
                 pass
 
 # משתנה גלובלי לשירות
-service = YemotTranscriptionServiceMail(YMOT_TOKEN, GEMINI_API_KEY, GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
+service = YemotTranscriptionServiceMail(YMOT_TOKEN, GEMINI_API_KEY, MAILJET_API_KEY, MAILJET_SECRET_KEY, MAILJET_FROM_EMAIL)
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
@@ -249,7 +256,7 @@ def transcribe():
         logger.debug("Transcribe endpoint called")
 
         # קבלת הנתיב מהפרמטר file
-        file_path = request.form.get('file')
+        file_path = request.form.get('file')MALGUNMAILGU_OMAIN, MAILUN
 
         if not file_path:
             logger.debug("No file path provided")
