@@ -118,6 +118,7 @@ class YemotTranscriptionServiceMail:
             logger.debug(f"Sending email to: {recipient}")
             response = requests.post(url, headers=headers, auth=auth, json=data)
             logger.debug(f"Mailjet response status: {response.status_code}")
+            logger.debug(f"Mailjet response body: {response.text}")
             if response.status_code == 200:
                 logger.debug("Email sent successfully")
                 return True
