@@ -256,7 +256,7 @@ def transcribe():
         logger.debug("Transcribe endpoint called")
 
         # קבלת הנתיב מהפרמטר file
-        file_path = request.form.get('file')MALGUNMAILGU_OMAIN, MAILUN
+        file_path = request.form.get('file')
 
         if not file_path:
             logger.debug("No file path provided")
