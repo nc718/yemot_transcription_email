@@ -1,16 +1,16 @@
 services:
   - type: web
-    name: yemot-transcription-elastic
+    name: yemot-transcription-maileroo
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python app_elastic.py
+    startCommand: python app_maileroo.py
     envVars:
       - key: YMOT_TOKEN
         sync: false
       - key: GEMINI_API_KEY
         sync: false
-      - key: ELASTIC_API_KEY
+      - key: MAILEROO_API_KEY
         sync: false
-      - key: ELASTIC_FROM_EMAIL
+      - key: MAILEROO_FROM_EMAIL
         sync: false
