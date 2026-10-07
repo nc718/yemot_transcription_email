@@ -90,14 +90,14 @@ class YemotTranscriptionServiceMail:
         """
         שולח מייל עם התמלול באמצעות Lettr API
         """
-        url = "https://api.lettr.com/v1/send"
+        url = "https://app.lettr.com/api/emails"
         headers = {
             "Authorization": f"Bearer {self.lettr_api_key}",
             "Content-Type": "application/json"
         }
         data = {
             "from": self.lettr_from_email,
-            "to": recipient,
+            "to": [recipient],
             "subject": subject,
             "text": body
         }
