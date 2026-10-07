@@ -1,16 +1,16 @@
 services:
   - type: web
-    name: yemot-transcription-lettr
+    name: yemot-transcription-sendlib
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python app_lettr.py
+    startCommand: python app_sendlib.py
     envVars:
       - key: YMOT_TOKEN
         sync: false
       - key: GEMINI_API_KEY
         sync: false
-      - key: LETTR_API_KEY
+      - key: SENDLIB_API_KEY
         sync: false
-      - key: LETTR_FROM_EMAIL
+      - key: SENDLIB_FROM_EMAIL
         sync: false
