@@ -127,7 +127,7 @@ class YemotTranscriptionServiceMail:
             
             # תמלול הקובץ
             response = self.client.models.generate_content(
-                model='gemini-3-flash-preview',
+                model='gemini-3.5-flash-lite',
                 contents=[
                     "Transcribe the following audio file accurately. The audio contains speech in Aramaic, Hebrew, and/or Biblical Hebrew - possibly mixed together in the same recording. The speech may be pronounced with Ashkenazi or Hasidic Jewish pronunciation. Please transcribe exactly what is said, preserving the original language, words, and pronunciation. Do not translate or summarize. Return ONLY the transcription text without any explanations, notes, or additional content.",
                     types.Part.from_uri(
