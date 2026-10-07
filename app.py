@@ -88,27 +88,27 @@ class YemotTranscriptionServiceMail:
     
     def send_email(self, subject: str, body: str, recipient: str):
         """
-        שולח מייל עם התמלול באמצעות SMTP2GO API
+        שולח מייל עם התמלול באמצעות Elastic Email API
         """
-        url = "https://api.smtp2go.com/v3/email/send"
-        data = {
-            "api_key": self.smtp2go_api_key,
-            "sender": self.smtp2go_from_email,
-            "to": [recipient],
+        url = "https://api.elasticemail.com/v2/email/send"
+        params = {
+            "apikey": self.elastic_api_key,
+            "from": self.elastic_from_email,
+            "to": recipient,
             "subject": subject,
-            "text_body": body
+            "bodyText": body
         }
         
         try:
             logger.debug(f"Sending email to: {recipient}")
-            response = requests.post(url, json=data)
-            logger.debug(f"SMTP2GO response status: {response.status_code}")
-            logger.debug(f"SMTP2GO response body: {response.text}")
+            response = requests.post(url, params=params)
+            logger.debug(f"Elastic Email response status: {response.status_code}")
+            logger.debug(f"Elastic Email response body: {response.text}")
             if response.status_code == 200:
                 logger.debug("Email sent successfully")
                 return True
             else:
-                logger.error(f"SMTP2GO error: {response.text}")
+                logger.error(f"Elastic Email error: {response.text}")
                 return False
         except Exception as e:
             logger.error(f"שגיאה בשליחת מייל: {e}")
