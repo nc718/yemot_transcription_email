@@ -54,11 +54,11 @@ class YemotTranscriptionServiceMail:
     """
     שירות תמלול קבצים מימות המשיח עם שליחת מייל
     """
-    def __init__(self, yemot_token: str, gemini_api_key: str, smtp2go_api_key: str, smtp2go_from_email: str):
+    def __init__(self, yemot_token: str, gemini_api_key: str, elastic_api_key: str, elastic_from_email: str):
         self.yemot_token = yemot_token
         self.gemini_api_key = gemini_api_key
-        self.smtp2go_api_key = smtp2go_api_key
-        self.smtp2go_from_email = smtp2go_from_email
+        self.elastic_api_key = elastic_api_key
+        self.elastic_from_email = elastic_from_email
         self.base_url = "https://www.call2all.co.il/ym/api/"
         self.client = genai.Client(api_key=gemini_api_key)
     
