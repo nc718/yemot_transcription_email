@@ -46,19 +46,19 @@ app = Flask(__name__)
 YMOT_TOKEN = os.getenv('YMOT_TOKEN', 'YOUR_TOKEN_HERE')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'YOUR_GEMINI_KEY_HERE')
 
-# הגדרות מייל - Elastic Email
-ELASTIC_API_KEY = os.getenv('ELASTIC_API_KEY', 'YOUR_ELASTIC_KEY_HERE')
-ELASTIC_FROM_EMAIL = os.getenv('ELASTIC_FROM_EMAIL', 'your@gmail.com')
+# הגדרות מייל - Maileroo
+MAILEROO_API_KEY = os.getenv('MAILEROO_API_KEY', 'YOUR_MAILEROO_KEY_HERE')
+MAILEROO_FROM_EMAIL = os.getenv('MAILEROO_FROM_EMAIL', 'your@gmail.com')
 
 class YemotTranscriptionServiceMail:
     """
     שירות תמלול קבצים מימות המשיח עם שליחת מייל
     """
-    def __init__(self, yemot_token: str, gemini_api_key: str, elastic_api_key: str, elastic_from_email: str):
+    def __init__(self, yemot_token: str, gemini_api_key: str, maileroo_api_key: str, maileroo_from_email: str):
         self.yemot_token = yemot_token
         self.gemini_api_key = gemini_api_key
-        self.elastic_api_key = elastic_api_key
-        self.elastic_from_email = elastic_from_email
+        self.maileroo_api_key = maileroo_api_key
+        self.maileroo_from_email = maileroo_from_email
         self.base_url = "https://www.call2all.co.il/ym/api/"
         self.client = genai.Client(api_key=gemini_api_key)
     
@@ -88,27 +88,30 @@ class YemotTranscriptionServiceMail:
     
     def send_email(self, subject: str, body: str, recipient: str):
         """
-        שולח מייל עם התמלול באמצעות Elastic Email API
+        שולח מייל עם התמלול באמצעות Maileroo API
         """
-        url = "https://api.elasticemail.com/v2/email/send"
-        params = {
-            "apikey": self.elastic_api_key,
-            "from": self.elastic_from_email,
+        url = "https://api.maileroo.com/send"
+        headers = {
+            "Authorization": f"Bearer {self.maileroo_api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "from": self.maileroo_from_email,
             "to": recipient,
             "subject": subject,
-            "bodyText": body
+            "text": body
         }
         
         try:
             logger.debug(f"Sending email to: {recipient}")
-            response = requests.post(url, params=params)
-            logger.debug(f"Elastic Email response status: {response.status_code}")
-            logger.debug(f"Elastic Email response body: {response.text}")
+            response = requests.post(url, json=data, headers=headers)
+            logger.debug(f"Maileroo response status: {response.status_code}")
+            logger.debug(f"Maileroo response body: {response.text}")
             if response.status_code == 200:
                 logger.debug("Email sent successfully")
                 return True
             else:
-                logger.error(f"Elastic Email error: {response.text}")
+                logger.error(f"Maileroo error: {response.text}")
                 return False
         except Exception as e:
             logger.error(f"שגיאה בשליחת מייל: {e}")
@@ -127,7 +130,7 @@ class YemotTranscriptionServiceMail:
             
             # תמלול הקובץ
             response = self.client.models.generate_content(
-                model='gemini-3.5-flash-lite',
+                model='gemini-3-flash-preview',
                 contents=[
                     "Transcribe the following audio file accurately. The audio contains speech in Aramaic, Hebrew, and/or Biblical Hebrew - possibly mixed together in the same recording. The speech may be pronounced with Ashkenazi or Hasidic Jewish pronunciation. Please transcribe exactly what is said, preserving the original language, words, and pronunciation. Do not translate or summarize. Return ONLY the transcription text without any explanations, notes, or additional content.",
                     types.Part.from_uri(
@@ -230,7 +233,7 @@ class YemotTranscriptionServiceMail:
                 pass
 
 # משתנה גלובלי לשירות
-service = YemotTranscriptionServiceMail(YMOT_TOKEN, GEMINI_API_KEY, ELASTIC_API_KEY, ELASTIC_FROM_EMAIL)
+service = YemotTranscriptionServiceMail(YMOT_TOKEN, GEMINI_API_KEY, MAILEROO_API_KEY, MAILEROO_FROM_EMAIL)
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
