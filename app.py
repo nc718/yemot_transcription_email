@@ -46,19 +46,19 @@ app = Flask(__name__)
 YMOT_TOKEN = os.getenv('YMOT_TOKEN', 'YOUR_TOKEN_HERE')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'YOUR_GEMINI_KEY_HERE')
 
-# הגדרות מייל - Maileroo
-MAILEROO_API_KEY = os.getenv('MAILEROO_API_KEY', 'YOUR_MAILEROO_KEY_HERE')
-MAILEROO_FROM_EMAIL = os.getenv('MAILEROO_FROM_EMAIL', 'your@gmail.com')
+# הגדרות מייל - Lettr
+LETTR_API_KEY = os.getenv('LETTR_API_KEY', 'YOUR_LETTR_KEY_HERE')
+LETTR_FROM_EMAIL = os.getenv('LETTR_FROM_EMAIL', 'your@gmail.com')
 
 class YemotTranscriptionServiceMail:
     """
     שירות תמלול קבצים מימות המשיח עם שליחת מייל
     """
-    def __init__(self, yemot_token: str, gemini_api_key: str, maileroo_api_key: str, maileroo_from_email: str):
+    def __init__(self, yemot_token: str, gemini_api_key: str, lettr_api_key: str, lettr_from_email: str):
         self.yemot_token = yemot_token
         self.gemini_api_key = gemini_api_key
-        self.maileroo_api_key = maileroo_api_key
-        self.maileroo_from_email = maileroo_from_email
+        self.lettr_api_key = lettr_api_key
+        self.lettr_from_email = lettr_from_email
         self.base_url = "https://www.call2all.co.il/ym/api/"
         self.client = genai.Client(api_key=gemini_api_key)
     
@@ -88,15 +88,15 @@ class YemotTranscriptionServiceMail:
     
     def send_email(self, subject: str, body: str, recipient: str):
         """
-        שולח מייל עם התמלול באמצעות Maileroo API
+        שולח מייל עם התמלול באמצעות Lettr API
         """
-        url = "https://api.maileroo.com/send"
+        url = "https://api.lettr.com/v1/send"
         headers = {
-            "Authorization": f"Bearer {self.maileroo_api_key}",
+            "Authorization": f"Bearer {self.lettr_api_key}",
             "Content-Type": "application/json"
         }
         data = {
-            "from": self.maileroo_from_email,
+            "from": self.lettr_from_email,
             "to": recipient,
             "subject": subject,
             "text": body
@@ -105,13 +105,13 @@ class YemotTranscriptionServiceMail:
         try:
             logger.debug(f"Sending email to: {recipient}")
             response = requests.post(url, json=data, headers=headers)
-            logger.debug(f"Maileroo response status: {response.status_code}")
-            logger.debug(f"Maileroo response body: {response.text}")
+            logger.debug(f"Lettr response status: {response.status_code}")
+            logger.debug(f"Lettr response body: {response.text}")
             if response.status_code == 200:
                 logger.debug("Email sent successfully")
                 return True
             else:
-                logger.error(f"Maileroo error: {response.text}")
+                logger.error(f"Lettr error: {response.text}")
                 return False
         except Exception as e:
             logger.error(f"שגיאה בשליחת מייל: {e}")
@@ -233,7 +233,7 @@ class YemotTranscriptionServiceMail:
                 pass
 
 # משתנה גלובלי לשירות
-service = YemotTranscriptionServiceMail(YMOT_TOKEN, GEMINI_API_KEY, MAILEROO_API_KEY, MAILEROO_FROM_EMAIL)
+service = YemotTranscriptionServiceMail(YMOT_TOKEN, GEMINI_API_KEY, LETTR_API_KEY, LETTR_FROM_EMAIL)
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
