@@ -1,16 +1,16 @@
 services:
   - type: web
-    name: yemot-transcription-maileroo
+    name: yemot-transcription-lettr
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python app_maileroo.py
+    startCommand: python app_lettr.py
     envVars:
       - key: YMOT_TOKEN
         sync: false
       - key: GEMINI_API_KEY
         sync: false
-      - key: MAILEROO_API_KEY
+      - key: LETTR_API_KEY
         sync: false
-      - key: MAILEROO_FROM_EMAIL
+      - key: LETTR_FROM_EMAIL
         sync: false
