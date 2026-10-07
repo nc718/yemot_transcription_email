@@ -46,19 +46,19 @@ app = Flask(__name__)
 YMOT_TOKEN = os.getenv('YMOT_TOKEN', 'YOUR_TOKEN_HERE')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'YOUR_GEMINI_KEY_HERE')
 
-# הגדרות מייל - Lettr
-LETTR_API_KEY = os.getenv('LETTR_API_KEY', 'YOUR_LETTR_KEY_HERE')
-LETTR_FROM_EMAIL = os.getenv('LETTR_FROM_EMAIL', 'your@gmail.com')
+# הגדרות מייל - Sendlib
+SENDLIB_API_KEY = os.getenv('SENDLIB_API_KEY', 'YOUR_SENDLIB_KEY_HERE')
+SENDLIB_FROM_EMAIL = os.getenv('SENDLIB_FROM_EMAIL', 'your@gmail.com')
 
 class YemotTranscriptionServiceMail:
     """
     שירות תמלול קבצים מימות המשיח עם שליחת מייל
     """
-    def __init__(self, yemot_token: str, gemini_api_key: str, lettr_api_key: str, lettr_from_email: str):
+    def __init__(self, yemot_token: str, gemini_api_key: str, sendlib_api_key: str, sendlib_from_email: str):
         self.yemot_token = yemot_token
         self.gemini_api_key = gemini_api_key
-        self.lettr_api_key = lettr_api_key
-        self.lettr_from_email = lettr_from_email
+        self.sendlib_api_key = sendlib_api_key
+        self.sendlib_from_email = sendlib_from_email
         self.base_url = "https://www.call2all.co.il/ym/api/"
         self.client = genai.Client(api_key=gemini_api_key)
     
@@ -233,7 +233,7 @@ class YemotTranscriptionServiceMail:
                 pass
 
 # משתנה גלובלי לשירות
-service = YemotTranscriptionServiceMail(YMOT_TOKEN, GEMINI_API_KEY, LETTR_API_KEY, LETTR_FROM_EMAIL)
+service = YemotTranscriptionServiceMail(YMOT_TOKEN, GEMINI_API_KEY, SENDLIB_API_KEY, SENDLIB_FROM_EMAIL)
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
