@@ -46,21 +46,19 @@ app = Flask(__name__)
 YMOT_TOKEN = os.getenv('YMOT_TOKEN', 'YOUR_TOKEN_HERE')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'YOUR_GEMINI_KEY_HERE')
 
-# הגדרות מייל - Mailjet
-MAILJET_API_KEY = os.getenv('MAILJET_API_KEY', 'YOUR_MAILJET_KEY_HERE')
-MAILJET_SECRET_KEY = os.getenv('MAILJET_SECRET_KEY', 'YOUR_MAILJET_SECRET_HERE')
-MAILJET_FROM_EMAIL = os.getenv('MAILJET_FROM_EMAIL', 'your@gmail.com')
+# הגדרות מייל - Elastic Email
+ELASTIC_API_KEY = os.getenv('ELASTIC_API_KEY', 'YOUR_ELASTIC_KEY_HERE')
+ELASTIC_FROM_EMAIL = os.getenv('ELASTIC_FROM_EMAIL', 'your@gmail.com')
 
 class YemotTranscriptionServiceMail:
     """
     שירות תמלול קבצים מימות המשיח עם שליחת מייל
     """
-    def __init__(self, yemot_token: str, gemini_api_key: str, mailjet_api_key: str, mailjet_secret_key: str, mailjet_from_email: str):
+    def __init__(self, yemot_token: str, gemini_api_key: str, smtp2go_api_key: str, smtp2go_from_email: str):
         self.yemot_token = yemot_token
         self.gemini_api_key = gemini_api_key
-        self.mailjet_api_key = mailjet_api_key
-        self.mailjet_secret_key = mailjet_secret_key
-        self.mailjet_from_email = mailjet_from_email
+        self.smtp2go_api_key = smtp2go_api_key
+        self.smtp2go_from_email = smtp2go_from_email
         self.base_url = "https://www.call2all.co.il/ym/api/"
         self.client = genai.Client(api_key=gemini_api_key)
     
@@ -90,40 +88,27 @@ class YemotTranscriptionServiceMail:
     
     def send_email(self, subject: str, body: str, recipient: str):
         """
-        שולח מייל עם התמלול באמצעות Mailjet API
+        שולח מייל עם התמלול באמצעות SMTP2GO API
         """
-        url = "https://api.mailjet.com/v3.1/send"
-        headers = {
-            "Content-Type": "application/json"
-        }
-        auth = (self.mailjet_api_key, self.mailjet_secret_key)
+        url = "https://api.smtp2go.com/v3/email/send"
         data = {
-            "Messages": [
-                {
-                    "From": {
-                        "Email": self.mailjet_from_email
-                    },
-                    "To": [
-                        {
-                            "Email": recipient
-                        }
-                    ],
-                    "Subject": subject,
-                    "TextPart": body
-                }
-            ]
+            "api_key": self.smtp2go_api_key,
+            "sender": self.smtp2go_from_email,
+            "to": [recipient],
+            "subject": subject,
+            "text_body": body
         }
         
         try:
             logger.debug(f"Sending email to: {recipient}")
-            response = requests.post(url, headers=headers, auth=auth, json=data)
-            logger.debug(f"Mailjet response status: {response.status_code}")
-            logger.debug(f"Mailjet response body: {response.text}")
+            response = requests.post(url, json=data)
+            logger.debug(f"SMTP2GO response status: {response.status_code}")
+            logger.debug(f"SMTP2GO response body: {response.text}")
             if response.status_code == 200:
                 logger.debug("Email sent successfully")
                 return True
             else:
-                logger.error(f"Mailjet error: {response.text}")
+                logger.error(f"SMTP2GO error: {response.text}")
                 return False
         except Exception as e:
             logger.error(f"שגיאה בשליחת מייל: {e}")
@@ -245,7 +230,7 @@ class YemotTranscriptionServiceMail:
                 pass
 
 # משתנה גלובלי לשירות
-service = YemotTranscriptionServiceMail(YMOT_TOKEN, GEMINI_API_KEY, MAILJET_API_KEY, MAILJET_SECRET_KEY, MAILJET_FROM_EMAIL)
+service = YemotTranscriptionServiceMail(YMOT_TOKEN, GEMINI_API_KEY, ELASTIC_API_KEY, ELASTIC_FROM_EMAIL)
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
